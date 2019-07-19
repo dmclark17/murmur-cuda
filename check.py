@@ -3,8 +3,8 @@ import itertools
 import mmh3
 
 
-keys = [1776, 420]
-seeds = [10, 11]
+keys = [0, 1]
+seeds = [0, 1]
 
 for key, seed in itertools.product(keys, seeds):
 

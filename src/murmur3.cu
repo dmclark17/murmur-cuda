@@ -79,13 +79,19 @@ __global__
 void _batch_helper(const void * keys, int len, int num_keys,
                    uint32_t * seeds, int num_seeds,
                    void * out) {
+
     const int32_t * data = (const int32_t*)keys;
     uint32_t* out_int = (uint32_t*)out;
 
-    for (int i = 0; i < num_keys; i++) {
-        for (int j = 0; j < num_seeds; j++) {
-            _Murmur3_helper(data + i, len, seeds[j], out_int + j + i * num_seeds);
-        }
+    int index = blockIdx.x * blockDim.x + threadIdx.x;
+    int stride = blockDim.x * gridDim.x;
+
+    for (int k = index; k < num_keys * num_seeds; k+= stride) {
+        int key_index = k / num_seeds;
+        int seed_index = k % num_keys;
+        _Murmur3_helper(data + key_index, len,
+                        seeds[seed_index],
+                        out_int + k);
     }
 }
 
@@ -106,7 +112,10 @@ void MurmurHash3_batch(const void * keys, int len, int num_keys,
     cudaMemcpy(cuda_keys, keys, len * num_keys, cudaMemcpyHostToDevice);
     cudaMemcpy(cuda_seeds, seeds, num_seeds * sizeof(uint32_t), cudaMemcpyHostToDevice);
 
-    _batch_helper<<<1, 1>>>(cuda_keys, len, num_keys, cuda_seeds, num_seeds, cuda_outs);
+    int blockSize = 256;
+    int numBlocks = (num_keys * num_seeds + blockSize - 1) / blockSize;
+
+    _batch_helper<<<numBlocks, blockSize>>>(cuda_keys, len, num_keys, cuda_seeds, num_seeds, cuda_outs);
 
     cudaDeviceSynchronize();
 
