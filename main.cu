@@ -4,8 +4,10 @@
 #include "murmur3.h"
 
 int main() {
-    int num_keys = 1000;
-    int num_seeds = 100;
+    // ptx_test<<<1,1>>>();
+
+    int num_keys = 5000;
+    int num_seeds = 500;
 
     int32_t* keys = new int32_t[num_keys];
     int len = sizeof(keys[0]);

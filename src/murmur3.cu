@@ -1,5 +1,5 @@
 //
-
+#include <stdio.h>
 #include <iostream>
 #include <stdint.h>
 
@@ -22,6 +22,66 @@ __device__ __forceinline__
 uint32_t rotl32 ( uint32_t x, int8_t r )
 {
   return (x << r) | (x >> (32 - r));
+}
+
+__device__
+void _Murmur3_helper_fast(const void * key, int len, uint32_t seed, void * out) {
+    const uint8_t * data = (const uint8_t*)key;
+    const int nblocks = len / 4;
+
+    uint32_t h1 = seed;
+
+    const uint32_t c1 = 0xcc9e2d51;
+    const uint32_t c2 = 0x1b873593;
+
+    const uint32_t * blocks = (const uint32_t *)(data + nblocks*4);
+
+    uint32_t k1;
+
+    for(int i = -nblocks; i; i++) {
+        k1 = blocks[i];
+
+        asm("{\n\t"
+            " mul.lo.u32 %0, %0, %1;\n\t"
+            ".reg .b32 t1;\n\t"
+            ".reg .b32 t2;\n\t"
+            " shl.b32 t1, %0, 15;\n\t"
+            " shl.b32 t2, %0, 17;\n\t"
+            " or.b32 %0, t1, t2;\n\t"
+            " mul.lo.u32 %0, %0, %1;\n\t"
+            "}"
+            : "+r"(k1) : "r"(c1), "r"(c2));
+
+        h1 ^= k1;
+        h1 = rotl32(h1, 13);
+        h1 = h1*5+0xe6546b64;
+    }
+
+    const uint8_t * tail = (const uint8_t*)(data + nblocks*4);
+
+    k1 = 0;
+
+    switch(len & 3) {
+        case 3:
+            k1 ^= tail[2] << 16;
+        case 2:
+            k1 ^= tail[1] << 8;
+        case 1:
+            k1 ^= tail[0];
+            k1 *= c1;
+            k1 = rotl32(k1, 15);
+            k1 *= c2;
+            h1 ^= k1;
+    };
+
+    //----------
+    // finalization
+
+    h1 ^= len;
+
+    h1 = fmix32(h1);
+
+    *(uint32_t*)out = h1;
 }
 
 __device__
@@ -124,4 +184,21 @@ void MurmurHash3_batch(const void * keys, int len, int num_keys,
     cudaFree(cuda_keys);
     cudaFree(cuda_seeds);
     cudaFree(cuda_outs);
+}
+
+__device__ int cube (int x)
+{
+  int y;
+  asm(".reg .u32 t1;\n\t"              // temp reg t1
+      " mul.lo.u32 t1, %1, %1;\n\t"    // t1 = x * x
+      " mul.lo.u32 %0, t1, %1;"        // y = t1 * x
+      : "=r"(y) : "r" (x));
+  return y;
+}
+
+__global__
+void ptx_test() {
+    int value = 10;
+    int cube_value = cube(value);
+    printf("%d %d\n", value, cube_value);
 }
