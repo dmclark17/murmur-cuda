@@ -1,9 +1,10 @@
+//
+
 #include <iostream>
 #include <stdint.h>
 
 #include "murmur3.h"
 
-// #define	FORCE_INLINE inline __attribute__((always_inline))
 
 __device__ __forceinline__
 uint32_t fmix32 ( uint32_t h )
@@ -23,7 +24,7 @@ uint32_t rotl32 ( uint32_t x, int8_t r )
   return (x << r) | (x >> (32 - r));
 }
 
-__global__
+__device__
 void _Murmur3_helper(const void * key, int len, uint32_t seed, void * out) {
     const uint8_t * data = (const uint8_t*)key;
     const int nblocks = len / 4;
@@ -74,22 +75,44 @@ void _Murmur3_helper(const void * key, int len, uint32_t seed, void * out) {
     *(uint32_t*)out = h1;
 }
 
-void MurmurHash3_cuda_32(const void * key, int len, uint32_t seed, void * out) {
-    void * cuda_key;
-    void * cuda_out;
+__global__
+void _batch_helper(const void * keys, int len, int num_keys,
+                   uint32_t * seeds, int num_seeds,
+                   void * out) {
+    const int32_t * data = (const int32_t*)keys;
+    uint32_t* out_int = (uint32_t*)out;
 
-    cudaMalloc(&cuda_key, len);
-    cudaMalloc(&cuda_out, sizeof(uint32_t));
+    for (int i = 0; i < num_keys; i++) {
+        for (int j = 0; j < num_seeds; j++) {
+            _Murmur3_helper(data + i, len, seeds[j], out_int + j + i * num_seeds);
+        }
+    }
+}
 
-    cudaMemcpy(cuda_key, key, len, cudaMemcpyHostToDevice);
-    cudaMemcpy(cuda_out, out, sizeof(uint32_t), cudaMemcpyHostToDevice);
 
-    _Murmur3_helper<<<1, 1>>>(cuda_key, len, seed, cuda_out);
+void MurmurHash3_batch(const void * keys, int len, int num_keys,
+                       uint32_t * seeds, int num_seeds,
+                       void * out) {
+
+    void * cuda_keys;
+    uint32_t * cuda_seeds;
+    void * cuda_outs;
+
+
+    cudaMalloc(&cuda_keys, len * num_keys);
+    cudaMalloc(&cuda_seeds, num_seeds * sizeof(uint32_t));
+    cudaMalloc(&cuda_outs, num_keys * num_seeds * sizeof(uint32_t));
+
+    cudaMemcpy(cuda_keys, keys, len * num_keys, cudaMemcpyHostToDevice);
+    cudaMemcpy(cuda_seeds, seeds, num_seeds * sizeof(uint32_t), cudaMemcpyHostToDevice);
+
+    _batch_helper<<<1, 1>>>(cuda_keys, len, num_keys, cuda_seeds, num_seeds, cuda_outs);
 
     cudaDeviceSynchronize();
 
-    cudaMemcpy(out, cuda_out, sizeof(uint32_t), cudaMemcpyDeviceToHost);
+    cudaMemcpy(out, cuda_outs, num_keys * num_seeds * sizeof(uint32_t), cudaMemcpyDeviceToHost);
 
-    cudaFree(cuda_key);
-    cudaFree(cuda_out);
+    cudaFree(cuda_keys);
+    cudaFree(cuda_seeds);
+    cudaFree(cuda_outs);
 }

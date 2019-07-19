@@ -3,13 +3,16 @@
 
 #include <stdint.h>
 
-// Kernel function to add the elements of two arrays
-__global__
-void add(int n, float *x, float *y);
-
-__global__
+__device__
 void _Murmur3_helper(const void * key, int len, uint32_t seed, void * out);
 
-void MurmurHash3_cuda_32(const void * key, int len, uint32_t seed, void * out);
+__global__
+void _batch_helper(const void * keys, int len, int num_keys,
+                   uint32_t * seeds, int num_seeds,
+                   void * out);
+
+void MurmurHash3_batch(const void * keys, int len, int num_keys,
+                       uint32_t * seeds, int num_seeds,
+                       void * out);
 
 #endif // _MURMUR3_CUDA_H_
