@@ -5,6 +5,8 @@
 
 #include "murmuda3.h"
 
+__constant__ const uint32_t c1 = 0xcc9e2d51;
+__constant__ const uint32_t c2 = 0x1b873593;
 
 __device__ __forceinline__
 uint32_t fmix32 ( uint32_t h )
@@ -69,8 +71,8 @@ void _Murmur3_helper(const void * key, int len, uint32_t seed, void * out) {
 
     uint32_t h1 = seed;
 
-    const uint32_t c1 = 0xcc9e2d51;
-    const uint32_t c2 = 0x1b873593;
+    // const uint32_t c1 = 0xcc9e2d51;
+    // const uint32_t c2 = 0x1b873593;
 
     const uint32_t * blocks = (const uint32_t *)(data + nblocks*4);
 
