@@ -1,13 +1,12 @@
 #include <iostream>
 #include <stdint.h>
 
-#include "murmur3.h"
+#include "murmuda3.h"
 
 int main() {
-    // ptx_test<<<1,1>>>();
 
-    int num_keys = 5000;
-    int num_seeds = 500;
+    int num_keys = 2;
+    int num_seeds = 2;
 
     int32_t* keys = new int32_t[num_keys];
     int len = sizeof(keys[0]);
@@ -25,9 +24,9 @@ int main() {
     MurmurHash3_batch(keys, len, num_keys, seeds, num_seeds, out);
 
 
-    // for (int i = 0; i < num_keys; i++) {
-    //     for (int j = 0; j < num_seeds; j++) {
-    //         std::cout << out[j + i * num_seeds] << std::endl;
-    //     }
-    // }
+    for (int i = 0; i < num_keys; i++) {
+        for (int j = 0; j < num_seeds; j++) {
+            std::cout << out[j + i * num_seeds] << std::endl;
+        }
+    }
 }

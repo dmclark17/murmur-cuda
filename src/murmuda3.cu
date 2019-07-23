@@ -3,7 +3,7 @@
 #include <iostream>
 #include <stdint.h>
 
-#include "murmur3.h"
+#include "murmuda3.h"
 
 
 __device__ __forceinline__
@@ -184,21 +184,4 @@ void MurmurHash3_batch(const void * keys, int len, int num_keys,
     cudaFree(cuda_keys);
     cudaFree(cuda_seeds);
     cudaFree(cuda_outs);
-}
-
-__device__ int cube (int x)
-{
-  int y;
-  asm(".reg .u32 t1;\n\t"              // temp reg t1
-      " mul.lo.u32 t1, %1, %1;\n\t"    // t1 = x * x
-      " mul.lo.u32 %0, t1, %1;"        // y = t1 * x
-      : "=r"(y) : "r" (x));
-  return y;
-}
-
-__global__
-void ptx_test() {
-    int value = 10;
-    int cube_value = cube(value);
-    printf("%d %d\n", value, cube_value);
 }
