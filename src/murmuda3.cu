@@ -148,7 +148,7 @@ void _batch_helper(const void * keys, int len, int num_keys,
 
     for (int k = index; k < num_keys * num_seeds; k+= stride) {
         int key_index = k / num_seeds;
-        int seed_index = k % num_keys;
+        int seed_index = k % num_seeds;
         _Murmur3_helper(data + key_index, len,
                         seeds[seed_index],
                         out_int + k);
